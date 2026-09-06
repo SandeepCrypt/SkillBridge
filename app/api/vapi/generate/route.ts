@@ -8,15 +8,24 @@ export async function GET() {
 
 export async function POST(request: Request) {
     const body = await request.json();
+    console.log("RAW VAPI BODY:", JSON.stringify(body, null, 2)); // temporary debug line
 
-    // Vapi wraps everything under message.toolCallList
     const toolCall = body.message?.toolCallList?.[0];
     const toolCallId = toolCall?.id;
-    const { role, type, level, techstack, amount, userid } = toolCall?.arguments ?? {};
+    const args = toolCall?.arguments ?? {};
+    const { role, type, level, techstack, amount, userid } = args;
+
+    // Guard so we never crash on a bad/missing field again
+    if (!techstack) {
+        console.error("Missing techstack. Full body was:", JSON.stringify(body));
+        return Response.json({
+            results: [{ toolCallId, error: "Missing required interview details. Please try again." }]
+        }, { status: 200 });
+    }
 
     try {
         const { text: questions } = await generateText({
-            model: google('gemini-3.6-flash'), // double-check this model name below
+            model: google('gemini-3.6-flash'),
             prompt: `Prepare questions for a job interview.
                 the job role is ${role}.
                 The job experience level is ${level}.
@@ -46,7 +55,6 @@ export async function POST(request: Request) {
 
         await db.collection("interviews").add(interview);
 
-        // MUST be this exact shape, and always HTTP 200
         return Response.json({
             results: [
                 {
@@ -65,7 +73,7 @@ export async function POST(request: Request) {
                     error: `Failed to generate interview: ${(error as Error).message}`
                 }
             ]
-        }, { status: 200 }); // still 200, not 500
+        }, { status: 200 });
     }
 }
 
