@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
     try {
         const { text: questions } = await generateText({
-            model: google('gemini-2.0-flash'), // double-check this model name below
+            model: google('gemini-3.6-flash'), // double-check this model name below
             prompt: `Prepare questions for a job interview.
                 the job role is ${role}.
                 The job experience level is ${level}.
