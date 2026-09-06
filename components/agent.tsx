@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 interface AgentProps {
     userName: string;
