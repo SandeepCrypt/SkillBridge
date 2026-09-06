@@ -2,6 +2,8 @@ import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import { db } from "@/firebase/admin";
 
+
+export const maxDuration = 60; // seconds — max allowed on Hobby without Fluid Compute
 export async function GET() {
     return Response.json({ success: true, data: 'THANK YOU' }, { status: 200 });
 }
