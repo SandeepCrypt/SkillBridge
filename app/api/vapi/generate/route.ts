@@ -7,10 +7,16 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-    const { type, role, level, techstack, amount, userid } = await request.json();
+    const body = await request.json();
+
+    // Vapi wraps everything under message.toolCallList
+    const toolCall = body.message?.toolCallList?.[0];
+    const toolCallId = toolCall?.id;
+    const { role, type, level, techstack, amount, userid } = toolCall?.arguments ?? {};
+
     try {
         const { text: questions } = await generateText({
-            model: google('gemini-3.6-flash'),
+            model: google('gemini-2.0-flash'), // double-check this model name below
             prompt: `Prepare questions for a job interview.
                 the job role is ${role}.
                 The job experience level is ${level}.
@@ -18,7 +24,7 @@ export async function POST(request: Request) {
                 The focus between behavioural and technical question should lean towards: ${type}.
                 The amount of questions required is: ${amount}.
                 Please return only the questions, without any aditional text.
-                the questions are going to be read by a voice assistant so do use "/" or "*" or any other special characters which might break the voice assistant.
+                the questions are going to be read by a voice assistant so do not use "/" or "*" or any other special characters which might break the voice assistant.
                 Return the questions formatted like this:
                 ["Question 1","Question 2","Question 3"]
                 
@@ -36,15 +42,30 @@ export async function POST(request: Request) {
             finalized: true,
             coverImage: getRandomInterviewCover(),
             createdAt: new Date().toISOString()
-        }
+        };
 
         await db.collection("interviews").add(interview);
 
-        return Response.json({ success: true }, { status: 200 })
+        // MUST be this exact shape, and always HTTP 200
+        return Response.json({
+            results: [
+                {
+                    toolCallId,
+                    result: `Interview generated successfully with ${interview.questions.length} questions.`
+                }
+            ]
+        }, { status: 200 });
 
     } catch (error) {
         console.error(error);
-        return Response.json({ success: false, error }, { status: 500 });
+        return Response.json({
+            results: [
+                {
+                    toolCallId,
+                    error: `Failed to generate interview: ${(error as Error).message}`
+                }
+            ]
+        }, { status: 200 }); // still 200, not 500
     }
 }
 
