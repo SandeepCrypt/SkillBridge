@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     try {
         const { text: questions } = await generateText({
-            model: google('gemini-2.0-flash-001'), // 'gemini-3.6-flash' isn't a real model id — double check whichever you use
+            model: google('gemini-3.6-flash'), // 'gemini-3.6-flash' isn't a real model id — double check whichever you use
             prompt: `Prepare questions for a job interview.
                 the job role is ${role}.
                 The job experience level is ${level}.
