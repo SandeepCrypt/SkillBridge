@@ -7,35 +7,29 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-    const body = await request.json();
+    const { role, type, level, techstack, amount, userid } = await request.json();
 
-    // Vapi wraps everything under message.toolCallList
-    const toolCall = body.message?.toolCallList?.[0];
-    const toolCallId = toolCall?.id;
-    const { role, type, level, techstack, amount, userid } = toolCall?.arguments ?? {};
+    if (!role || !type || !level || !techstack || !amount || !userid) {
+        return Response.json({ success: false, error: 'Missing required interview details.' }, { status: 400 });
+    }
 
     try {
         const { text: questions } = await generateText({
-            model: google('gemini-3.6-flash'), // double-check this model name below
+            model: google('gemini-2.0-flash-001'), // 'gemini-3.6-flash' isn't a real model id — double check whichever you use
             prompt: `Prepare questions for a job interview.
                 the job role is ${role}.
                 The job experience level is ${level}.
                 The tech stack used in the job is ${techstack}.
                 The focus between behavioural and technical question should lean towards: ${type}.
                 The amount of questions required is: ${amount}.
-                Please return only the questions, without any aditional text.
+                Please return only the questions, without any additional text.
                 the questions are going to be read by a voice assistant so do not use "/" or "*" or any other special characters which might break the voice assistant.
                 Return the questions formatted like this:
-                ["Question 1","Question 2","Question 3"]
-                
-                Thank You!<3
-                `,
+                ["Question 1","Question 2","Question 3"]`,
         });
 
         const interview = {
-            role,
-            type,
-            level,
+            role, type, level,
             techstack: techstack.split(','),
             questions: JSON.parse(questions),
             userId: userid,
@@ -46,26 +40,17 @@ export async function POST(request: Request) {
 
         await db.collection("interviews").add(interview);
 
-        // MUST be this exact shape, and always HTTP 200
         return Response.json({
-            results: [
-                {
-                    toolCallId,
-                    result: `Interview generated successfully with ${interview.questions.length} questions.`
-                }
-            ]
+            success: true,
+            message: `Interview generated successfully with ${interview.questions.length} questions.`
         }, { status: 200 });
 
     } catch (error) {
         console.error(error);
         return Response.json({
-            results: [
-                {
-                    toolCallId,
-                    error: `Failed to generate interview: ${(error as Error).message}`
-                }
-            ]
-        }, { status: 200 }); // still 200, not 500
+            success: false,
+            error: `Failed to generate interview: ${(error as Error).message}`
+        }, { status: 500 });
     }
 }
 
