@@ -98,3 +98,32 @@ export async function setSessionCookie(idToken: string) {
         const user =await getCurrentUser();
         return !!user;
     };
+export async function getInterviewsByUserId(userId: string): Promise<Interview[] | null> {
+  const interviews = await db
+    .collection('interviews')                    // ← no inline type
+    .where('userId', '==', userId)               // ← no inline type
+    .orderBy('createdAt', 'desc')
+    .get();
+
+  return interviews.docs.map((doc) => ({          // ← .docs, not .listDocuments
+    id: doc.id,
+    ...doc.data(),
+  })) as Interview[];
+}
+
+export async function getLatestInterviews(params : GetLatestInterviewsParams): Promise<Interview[] | null> {
+    const {userId,limit=20} = params;
+ 
+  const interviews = await db
+    .collection('interviews')                    // ← no inline type
+   .where('finalized', '==', true)    
+     .where('userId', '!=' ,userId)           // ← no inline type
+    .orderBy('createdAt', 'desc')
+    .limit(limit)
+    .get();
+
+  return interviews.docs.map((doc) => ({          // ← .docs, not .listDocuments
+    id: doc.id,
+    ...doc.data(),
+  })) as Interview[];
+}
